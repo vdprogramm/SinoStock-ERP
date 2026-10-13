@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="vi">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>SinoStock ERP | 中越库存订单管理</title>
+  <title>SinoStock ERP | Quản lý kho và đơn hàng</title>
   <style>
     :root { --navy:#12233e;--navy2:#1a3454;--mint:#16a59a;--bg:#f3f6fa;--text:#23364c;--muted:#758397;--border:#e3e9f0;--danger:#d44949 }
     *{box-sizing:border-box}
-    body{margin:0;color:var(--text);background:var(--bg);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+    body{margin:0;color:var(--text);background:var(--bg);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
     button,input,select{font:inherit}
     button{cursor:pointer;border:0;border-radius:8px;padding:10px 15px;font-weight:650;background:var(--mint);color:#fff}
     button:disabled{opacity:.45;cursor:not-allowed}
@@ -61,17 +61,22 @@
 "use strict";
 const state={token:sessionStorage.getItem("sino_token")||"",user:sessionStorage.getItem("sino_user")||"",role:sessionStorage.getItem("sino_role")||"",products:[],orders:[],dashboard:null};
 const el=id=>document.getElementById(id);
+const roleVi={ADMIN:"Quản trị viên",STAFF:"Nhân viên"};
+const statusVi={PENDING:"Chờ xác nhận",CONFIRMED:"Đã xác nhận",CANCELLED:"Đã hủy"};
+const demoNamesVi={"无线鼠标":"Chuột không dây","机械键盘":"Bàn phím cơ","USB-C数据线":"Cáp USB-C"};
+const productName=p=>demoNamesVi[p.nameCn]||p.nameCn||p.nameEn||"Sản phẩm chưa có tên";
+
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function notify(message,error=false){const n=el("message");n.textContent=message;n.className=error?"error":"";n.style.display="block";clearTimeout(notify.t);notify.t=setTimeout(()=>n.style.display="none",4500);}
-const money=n=>Number(n||0).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2})+" ¥";
+const money=n=>Number(n||0).toLocaleString("vi-VN",{minimumFractionDigits:2,maximumFractionDigits:2})+" ¥";
 async function api(path,method="GET",body){
   const opts={method,headers:{"Content-Type":"application/json",...(state.token?{"Authorization":"Bearer "+state.token}:{})}};
   if(body!==undefined)opts.body=JSON.stringify(body);
   let res;
-  try{res=await fetch("/api"+path,opts);}catch(e){throw Error("无法连接服务器 / Cannot reach server");}
+  try{res=await fetch("/api"+path,opts);}catch(e){throw Error("Không thể kết nối máy chủ. Vui lòng thử lại.");}
   let data=null;try{data=await res.json();}catch(e){}
   if(!res.ok){
-    if(res.status===401&&path!=="/auth/login"){signOut();throw Error("登录已过期 / Session expired");}
+    if(res.status===401&&path!=="/auth/login"){signOut();throw Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");}
     throw Error(data?.message||"HTTP "+res.status);
   }
   return data;
@@ -80,13 +85,13 @@ function signOut(){Object.keys(sessionStorage).filter(x=>x.startsWith("sino_")).
 function renderLogin(){
   el("root").innerHTML=`<div class="login-wrap"><div class="login">
     <div class="brand" style="color:#12233e">Sino<span>Stock</span> ERP</div>
-    <p class="sub">中越库存订单管理系统 · Inventory & Orders</p>
-    <h1>欢迎回来</h1><p class="sub">请使用管理员账户登录 / Sign in</p>
+    <p class="sub">Hệ thống quản lý kho và đơn hàng</p>
+    <h1>Chào mừng trở lại</h1><p class="sub">Vui lòng đăng nhập vào hệ thống</p>
     <form id="loginForm">
-      <div class="field"><label for="username">用户名 · Username</label><input id="username" autocomplete="username" required value="admin"></div>
-      <div class="field"><label for="password">密码 · Password</label><input id="password" type="password" autocomplete="current-password" required></div>
-      <button type="submit">登录 · Sign in</button>
-    </form><p class="sub" style="margin-top:23px">安全连接 · Backend API /api</p>
+      <div class="field"><label for="username">Tên đăng nhập</label><input id="username" autocomplete="username" required value="admin"></div>
+      <div class="field"><label for="password">Mật khẩu</label><input id="password" type="password" autocomplete="current-password" required></div>
+      <button type="submit">Đăng nhập</button>
+    </form><p class="sub" style="margin-top:23px">Kết nối bảo mật · Hệ thống quản lý SinoStock</p>
   </div></div>`;
   el("loginForm").onsubmit=async(e)=>{
     e.preventDefault();
@@ -103,39 +108,39 @@ async function showDashboard(){
   if(!state.token){renderLogin();return;}
   el("root").innerHTML=`<div class="app">
     <aside class="sidebar"><div class="brand">Sino<span>Stock</span></div>
-      <small>中越库存订单管理系统</small><a href="#dashboard">▦ &nbsp; 业务总览 · Overview</a>
-      <div style="margin-top:40px;color:#9fb6c8;font-size:12px">OPERATIONS / 业务管理</div>
-      <a href="#inventory">▤ &nbsp; 商品 / Products</a>
-      <a href="#orders">▣ &nbsp; 订单 / Orders</a>
+      <small>Quản lý kho và đơn hàng</small><a href="#dashboard">▦ &nbsp; Tổng quan</a>
+      <div style="margin-top:40px;color:#9fb6c8;font-size:12px">QUẢN LÝ NGHIỆP VỤ</div>
+      <a href="#inventory">▤ &nbsp; Hàng hóa</a>
+      <a href="#orders">▣ &nbsp; Đơn hàng</a>
       <div style="margin-top:35px"><small>Java 21 · Spring Boot · PostgreSQL</small></div>
     </aside>
-    <main><header><div><h1>业务仪表盘 <span style="color:#20a49a">/</span> Dashboard</h1>
-     <p class="sub">库存、订单及营业数据 · Inventory & Sales</p></div>
-     <div class="actions"><small>${escapeHtml(state.user)} · ${escapeHtml(state.role)}</small>
-     <button class="secondary" id="refresh">刷新 · Refresh</button>
-     <button class="secondary" id="logout">退出 · Logout</button></div></header>
+    <main><header><div><h1>Tổng quan kinh doanh</h1>
+     <p class="sub">Theo dõi hàng hóa, đơn hàng và doanh thu</p></div>
+     <div class="actions"><small>${escapeHtml(state.user)} · ${escapeHtml(roleVi[state.role]||state.role)}</small>
+     <button class="secondary" id="refresh">Làm mới</button>
+     <button class="secondary" id="logout">Đăng xuất</button></div></header>
     <section class="cards" id="stats"></section>
     <div class="panels">
-      <section class="panel" id="inventory"><h2>商品库存 · Products</h2><div class="table-wrap" id="productTable"></div></section>
-      <section class="panel" id="orders"><h2>订单管理 · Orders</h2><div class="table-wrap" id="ordersTable"></div></section>
-      <section class="panel" id="create-order"><h2>创建订单 · New Order</h2>
+      <section class="panel" id="inventory"><h2>Danh sách hàng hóa và tồn kho</h2><div class="table-wrap" id="productTable"></div></section>
+      <section class="panel" id="orders"><h2>Quản lý đơn hàng</h2><div class="table-wrap" id="ordersTable"></div></section>
+      <section class="panel" id="create-order"><h2>Tạo đơn hàng</h2>
         <form id="orderForm"><div class="form-grid">
-        <div class="field"><label>商品 · Product</label><select id="orderProduct" required></select></div>
-        <div class="field"><label>数量 · Quantity</label><input id="orderQuantity" type="number" min="1" value="1" required></div>
-        </div><button type="submit">创建待确认订单 · Create Pending Order</button></form>
-        <p class="sub">确认订单后才扣减库存 / Inventory deducts on confirmation.</p>
+        <div class="field"><label>Sản phẩm</label><select id="orderProduct" required></select></div>
+        <div class="field"><label>Số lượng</label><input id="orderQuantity" type="number" min="1" value="1" required></div>
+        </div><button type="submit">Tạo đơn hàng chờ xác nhận</button></form>
+        <p class="sub">Số lượng tồn kho chỉ được trừ khi xác nhận đơn hàng.</p>
       </section>
-      <section class="panel" id="new-product"><h2>新增商品 · New Product</h2>
+      <section class="panel" id="new-product"><h2>Thêm sản phẩm mới</h2>
         <form id="productForm"><div class="form-grid">
-        <div class="field"><label>SKU</label><input name="sku" required placeholder="CN-004"></div>
-        <div class="field"><label>中文名 · Chinese</label><input name="nameCn" required placeholder="蓝牙耳机"></div>
-        <div class="field"><label>英文名 · English</label><input name="nameEn" required placeholder="Bluetooth Earbuds"></div>
-        <div class="field"><label>价格 (CNY)</label><input name="priceCny" type="number" min=".01" step=".01" required></div>
-        <div class="field"><label>库存 · Stock</label><input name="stockQuantity" type="number" min="0" value="10" required></div>
-        <div class="field"><label>库存预警 · Alert limit</label><input name="lowStockThreshold" type="number" min="0" value="5" required></div>
-        </div><button type="submit">保存商品 · Add Product</button></form>
+        <div class="field"><label>SKU</label><input name="sku" required placeholder="SP-004"></div>
+        <div class="field"><label>Tên sản phẩm</label><input name="nameCn" required placeholder="Ví dụ: Tai nghe Bluetooth"></div>
+        
+        <div class="field"><label>Giá bán (CNY)</label><input name="priceCny" type="number" min=".01" step=".01" required></div>
+        <div class="field"><label>Số lượng tồn kho</label><input name="stockQuantity" type="number" min="0" value="10" required></div>
+        <div class="field"><label>Ngưỡng cảnh báo tồn kho</label><input name="lowStockThreshold" type="number" min="0" value="5" required></div>
+        </div><button type="submit">Lưu sản phẩm</button></form>
       </section>
-    </div><p class="sub" style="margin-top:25px">SinoStock ERP · Demo MVP · Data stored in PostgreSQL</p>
+    </div><p class="sub" style="margin-top:25px">SinoStock ERP · Hệ thống quản lý kho và đơn hàng · Dữ liệu được lưu trên PostgreSQL</p>
     </main></div>`;
   el("logout").onclick=signOut;el("refresh").onclick=refresh;
   el("orderForm").onsubmit=createOrder;el("productForm").onsubmit=createProduct;
@@ -147,23 +152,23 @@ async function refresh(){
    const [dashboard,products,orders]=await Promise.all([api("/dashboard"),api("/products"),api("/orders")]);
    state.dashboard=dashboard;state.products=products;state.orders=orders;
    el("stats").innerHTML=[
-    ["总营业额 / Revenue",money(dashboard.totalRevenueCny)],
-    ["已完成订单 / Confirmed",dashboard.confirmedOrders],
-    ["待确认订单 / Pending",dashboard.pendingOrders],
-    ["低库存商品 / Low Stock",dashboard.lowStockProducts]
+    ["Tổng doanh thu",money(dashboard.totalRevenueCny)],
+    ["Đơn đã xác nhận",dashboard.confirmedOrders],
+    ["Đơn chờ xác nhận",dashboard.pendingOrders],
+    ["Sản phẩm sắp hết",dashboard.lowStockProducts]
    ].map(([label,value])=>`<div class="card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
-   el("productTable").innerHTML=`<table><thead><tr><th>SKU</th><th>商品</th><th>售价</th><th>库存</th></tr></thead><tbody>${
-     products.map(p=>`<tr><td>${escapeHtml(p.sku)}</td><td>${escapeHtml(p.nameCn)}<br><small>${escapeHtml(p.nameEn)}</small></td><td>${escapeHtml(money(p.priceCny))}</td><td>${p.stockQuantity<=p.lowStockThreshold?'<span style="color:#d44949">⚠ </span>':''}${escapeHtml(p.stockQuantity)}</td></tr>`).join("")
-    ||'<tr><td colspan="4" class="empty">暂无商品 / No products</td></tr>'}</tbody></table>`;
-   el("ordersTable").innerHTML=`<table><thead><tr><th>订单</th><th>金额</th><th>状态</th><th>操作</th></tr></thead><tbody>${
-     orders.map(o=>`<tr><td>${escapeHtml(o.orderNumber)}</td><td>${escapeHtml(money(o.totalAmountCny))}</td><td><span class="pill ${escapeHtml(o.status)}">${escapeHtml(o.status)}</span></td><td>
-     ${o.status==="PENDING"?`<button data-action="confirm" data-id="${Number(o.id)}">确认</button>`:""}
-     ${o.status!=="CANCELLED"?`<button class="danger" data-action="cancel" data-id="${Number(o.id)}">取消</button>`:""}</td></tr>`).join("")
-    ||'<tr><td colspan="4" class="empty">暂无订单 / No orders</td></tr>'}</tbody></table>`;
-   el("orderProduct").innerHTML=products.map(p=>`<option value="${Number(p.id)}">${escapeHtml(p.nameCn)} · ${escapeHtml(p.sku)} (${p.stockQuantity})</option>`).join("");
+   el("productTable").innerHTML=`<table><thead><tr><th>SKU</th><th>Sản phẩm</th><th>Giá bán</th><th>Tồn kho</th></tr></thead><tbody>${
+     products.map(p=>`<tr><td>${escapeHtml(p.sku)}</td><td>${escapeHtml(productName(p))}</td><td>${escapeHtml(money(p.priceCny))}</td><td>${p.stockQuantity<=p.lowStockThreshold?'<span style="color:#d44949">⚠ </span>':''}${escapeHtml(p.stockQuantity)}</td></tr>`).join("")
+    ||'<tr><td colspan="4" class="empty">Chưa có sản phẩm nào</td></tr>'}</tbody></table>`;
+   el("ordersTable").innerHTML=`<table><thead><tr><th>Mã đơn hàng</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>${
+     orders.map(o=>`<tr><td>${escapeHtml(o.orderNumber)}</td><td>${escapeHtml(money(o.totalAmountCny))}</td><td><span class="pill ${escapeHtml(o.status)}">${escapeHtml(statusVi[o.status]||o.status)}</span></td><td>
+     ${o.status==="PENDING"?`<button data-action="confirm" data-id="${Number(o.id)}">Xác nhận</button>`:""}
+     ${o.status!=="CANCELLED"?`<button class="danger" data-action="cancel" data-id="${Number(o.id)}">Hủy đơn</button>`:""}</td></tr>`).join("")
+    ||'<tr><td colspan="4" class="empty">Chưa có đơn hàng nào</td></tr>'}</tbody></table>`;
+   el("orderProduct").innerHTML=products.map(p=>`<option value="${Number(p.id)}">${escapeHtml(productName(p))} · ${escapeHtml(p.sku)} (${p.stockQuantity})</option>`).join("");
    el("ordersTable").querySelectorAll("button[data-action]").forEach(b=>b.onclick=async()=>{
      b.disabled=true;
-     try{await api("/orders/"+b.dataset.id+"/"+b.dataset.action,"PATCH");notify("订单状态已更新 / Order updated");await refresh();}
+     try{await api("/orders/"+b.dataset.id+"/"+b.dataset.action,"PATCH");notify("Đã cập nhật trạng thái đơn hàng");await refresh();}
      catch(e){notify(e.message,true);b.disabled=false;}
    });
  }catch(e){notify(e.message,true)}
@@ -171,16 +176,16 @@ async function refresh(){
 async function createOrder(e){
  e.preventDefault();
  const id=Number(el("orderProduct").value),quantity=Number(el("orderQuantity").value);
- if(!Number.isInteger(id)||id<1||!Number.isInteger(quantity)||quantity<1){notify("请选择商品及有效数量",true);return;}
+ if(!Number.isInteger(id)||id<1||!Number.isInteger(quantity)||quantity<1){notify("Vui lòng chọn sản phẩm và nhập số lượng hợp lệ",true);return;}
  const b=e.target.querySelector('button');b.disabled=true;
- try{await api("/orders","POST",{items:[{productId:id,quantity}]});notify("已创建待确认订单 · Pending order created");await refresh();}
+ try{await api("/orders","POST",{items:[{productId:id,quantity}]});notify("Đã tạo đơn hàng chờ xác nhận");await refresh();}
  catch(err){notify(err.message,true)}finally{b.disabled=false;}
 }
 async function createProduct(e){
  e.preventDefault();const f=new FormData(e.target);
- const body={sku:f.get("sku"),nameCn:f.get("nameCn"),nameEn:f.get("nameEn"),priceCny:Number(f.get("priceCny")),stockQuantity:Number(f.get("stockQuantity")),lowStockThreshold:Number(f.get("lowStockThreshold"))};
+ const body={sku:f.get("sku"),nameCn:f.get("nameCn"),nameEn:f.get("nameCn"),priceCny:Number(f.get("priceCny")),stockQuantity:Number(f.get("stockQuantity")),lowStockThreshold:Number(f.get("lowStockThreshold"))};
  const b=e.target.querySelector('button');b.disabled=true;
- try{await api("/products","POST",body);notify("商品已添加 · Product added");e.target.reset();await refresh();}
+ try{await api("/products","POST",body);notify("Đã thêm sản phẩm thành công");e.target.reset();await refresh();}
  catch(err){notify(err.message,true)}finally{b.disabled=false;}
 }
 if(state.token)showDashboard();else renderLogin();
