@@ -1,0 +1,11 @@
+.git
+.github
+target
+.idea
+.vscode
+*.iml
+.env
+.env.*
+!*.example
+README.md
+scripts

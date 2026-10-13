@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:sinostocktest;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+app:
+  jwt-secret: SINOSTOCK-INTEGRATION-TEST-SECRET-LONG-ENOUGH
+  jwt-expiration-minutes: 120
+  cors-origin: http://localhost:5173
+  seed-demo: true
