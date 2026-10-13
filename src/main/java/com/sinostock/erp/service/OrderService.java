@@ -16,9 +16,10 @@ public class OrderService {
     private final ProductRepository products;
     private final UserRepository users;
     private final InventoryLogRepository logs;
+    private final PaymentRepository payments;
     public OrderService(OrderRepository orders, ProductRepository products, UserRepository users,
-                        InventoryLogRepository logs) {
-        this.orders = orders; this.products = products; this.users = users; this.logs = logs;
+                        InventoryLogRepository logs, PaymentRepository payments) {
+        this.orders = orders; this.products = products; this.users = users; this.logs = logs; this.payments = payments;
     }
 
     @Transactional
@@ -69,6 +70,8 @@ public class OrderService {
     @Transactional
     public OrderResponse cancel(Long id) {
         SaleOrder order = lockedOrder(id);
+        if (!payments.findByOrderId(id).isEmpty())
+            throw new ApiException(HttpStatus.CONFLICT, "Đơn đã thu tiền; cần xử lý hoàn tiền trước khi hủy");
         if (order.getStatus() == OrderStatus.CANCELLED)
             throw new ApiException(HttpStatus.CONFLICT, "Đơn hàng đã bị hủy trước đó");
         if (order.getStatus() == OrderStatus.CONFIRMED) {
