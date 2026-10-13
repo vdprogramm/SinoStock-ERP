@@ -24,4 +24,6 @@ public class UserAccount {
     public String getUsername() { return username; }
     public String getPasswordHash() { return passwordHash; }
     public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
+    public void changePassword(String hash) { this.passwordHash = hash; }
 }
