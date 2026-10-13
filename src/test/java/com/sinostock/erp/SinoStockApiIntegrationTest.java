@@ -129,6 +129,8 @@ class SinoStockApiIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"changeQuantity\":4,\"reason\":\"RESTOCK\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.stockQuantity").value(6));
         mvc.perform(get("/api/inventory/logs").header("Authorization", "Bearer " + staffToken))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/inventory/logs").header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk());
     }
 }
