@@ -71,6 +71,29 @@ class SinoStockApiIntegrationTest {
     }
 
     @Test
+    void sixRolesHaveSeparatedPermissions() throws Exception {
+        String createUser = """
+          {"username":"acc_%s","password":"UniquePass123!","role":"ACCOUNTANT"}
+          """.formatted(UUID.randomUUID().toString().substring(0,8));
+        String response = mvc.perform(post("/api/admin/users")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON).content(createUser))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.role").value("ACCOUNTANT"))
+                .andReturn().getResponse().getContentAsString();
+        String username = json.readTree(response).get("username").asText();
+        String accountant = loginAs(username, "UniquePass123!");
+        mvc.perform(get("/api/accounting/receivables")
+                .header("Authorization", "Bearer " + accountant)).andExpect(status().isOk());
+        mvc.perform(get("/api/reports/summary")
+                .header("Authorization", "Bearer " + accountant)).andExpect(status().isOk());
+        mvc.perform(get("/api/suppliers")
+                .header("Authorization", "Bearer " + accountant)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/admin/users")
+                .header("Authorization", "Bearer " + accountant)
+                .contentType(MediaType.APPLICATION_JSON).content(createUser)).andExpect(status().isForbidden());
+    }
+
+    @Test
     void fullOrderLifecycleDeductsAndRestoresStock() throws Exception {
         long productId = createProduct(5);
         long orderId = createOrder(productId, 3);
