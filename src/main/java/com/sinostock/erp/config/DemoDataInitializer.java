@@ -51,9 +51,9 @@ public class DemoDataInitializer {
             }
 
             if ((demoEnabled || sampleProductsEnabled) && products.count() == 0) {
-                products.save(new Product("CN-001", "无线鼠标", "Wireless Mouse", new BigDecimal("59.00"), 25, 5));
-                products.save(new Product("CN-002", "机械键盘", "Mechanical Keyboard", new BigDecimal("199.00"), 8, 10));
-                products.save(new Product("CN-003", "USB-C数据线", "USB-C Cable", new BigDecimal("19.90"), 60, 10));
+                products.save(new Product("CN-001", "Chuột không dây", "Chuột không dây", new BigDecimal("59.00"), 25, 5));
+                products.save(new Product("CN-002", "Bàn phím cơ", "Bàn phím cơ", new BigDecimal("199.00"), 8, 10));
+                products.save(new Product("CN-003", "Cáp USB-C", "Cáp USB-C", new BigDecimal("19.90"), 60, 10));
             }
         };
     }
