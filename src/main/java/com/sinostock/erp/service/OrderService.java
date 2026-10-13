@@ -37,8 +37,8 @@ public class OrderService {
         BigDecimal total = BigDecimal.ZERO;
         for (var entry : merged.entrySet()) {
             Product p = products.findById(entry.getKey())
-                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product " + entry.getKey() + " không tồn tại"));
-            if (!p.isActive()) throw new ApiException(HttpStatus.CONFLICT, "Product " + p.getSku() + " đã ngừng kinh doanh");
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm mã " + entry.getKey()));
+            if (!p.isActive()) throw new ApiException(HttpStatus.CONFLICT, "Sản phẩm " + p.getSku() + " đã ngừng kinh doanh");
             OrderItem item = new OrderItem(p, entry.getValue());
             order.addItem(item);
             total = total.add(item.getLineTotalCny());
@@ -97,7 +97,7 @@ public class OrderService {
     }
 
     private SaleOrder lockedOrder(Long id) {
-        return orders.findByIdForUpdate(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Order không tồn tại"));
+        return orders.findByIdForUpdate(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
     }
     private Product lockedProduct(Long id) {
         return products.findByIdForUpdate(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product không tồn tại"));
