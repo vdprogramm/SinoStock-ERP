@@ -24,21 +24,21 @@ public class OrderService {
     @Transactional
     public OrderResponse create(CreateOrderRequest request, String username) {
         UserAccount user = users.findByUsername(username)
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid user"));
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Tài khoản không hợp lệ"));
         // Merge duplicate product IDs to avoid stock race and duplicate order lines.
         Map<Long, Integer> merged = new TreeMap<>();
         for (OrderLineRequest line : request.items()) {
             if (line.productId() == null || line.quantity() == null || line.quantity() <= 0)
-                throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid order item");
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Sản phẩm hoặc số lượng trong đơn không hợp lệ");
             try { merged.merge(line.productId(), line.quantity(), Math::addExact); }
-            catch (ArithmeticException ex) { throw new ApiException(HttpStatus.BAD_REQUEST, "Quantity too large"); }
+            catch (ArithmeticException ex) { throw new ApiException(HttpStatus.BAD_REQUEST, "Số lượng đặt hàng vượt quá giới hạn"); }
         }
         SaleOrder order = new SaleOrder("SO-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase(), user);
         BigDecimal total = BigDecimal.ZERO;
         for (var entry : merged.entrySet()) {
             Product p = products.findById(entry.getKey())
-                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product " + entry.getKey() + " not found"));
-            if (!p.isActive()) throw new ApiException(HttpStatus.CONFLICT, "Product " + p.getSku() + " is inactive");
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product " + entry.getKey() + " không tồn tại"));
+            if (!p.isActive()) throw new ApiException(HttpStatus.CONFLICT, "Product " + p.getSku() + " đã ngừng kinh doanh");
             OrderItem item = new OrderItem(p, entry.getValue());
             order.addItem(item);
             total = total.add(item.getLineTotalCny());
@@ -51,13 +51,13 @@ public class OrderService {
     public OrderResponse confirm(Long id) {
         SaleOrder order = lockedOrder(id);
         if (order.getStatus() != OrderStatus.PENDING)
-            throw new ApiException(HttpStatus.CONFLICT, "Only PENDING orders can be confirmed");
+            throw new ApiException(HttpStatus.CONFLICT, "Chỉ đơn hàng đang chờ mới có thể xác nhận");
         // Sorted product row locks: all orders lock in consistent order to reduce deadlocks.
         for (OrderItem item : sortedItems(order)) {
             Product p = lockedProduct(item.getProduct().getId());
-            if (!p.isActive()) throw new ApiException(HttpStatus.CONFLICT, "Inactive product: " + p.getSku());
+            if (!p.isActive()) throw new ApiException(HttpStatus.CONFLICT, "Sản phẩm ngừng kinh doanh: " + p.getSku());
             if (p.getStockQuantity() < item.getQuantity())
-                throw new ApiException(HttpStatus.CONFLICT, "Insufficient stock for SKU " + p.getSku());
+                throw new ApiException(HttpStatus.CONFLICT, "Không đủ tồn kho cho mã SKU " + p.getSku());
             int newStock = p.getStockQuantity() - item.getQuantity();
             p.changeStock(newStock);
             logs.save(new InventoryLog(p, order, -item.getQuantity(), newStock, "ORDER_CONFIRM"));
@@ -70,13 +70,13 @@ public class OrderService {
     public OrderResponse cancel(Long id) {
         SaleOrder order = lockedOrder(id);
         if (order.getStatus() == OrderStatus.CANCELLED)
-            throw new ApiException(HttpStatus.CONFLICT, "Order already cancelled");
+            throw new ApiException(HttpStatus.CONFLICT, "Đơn hàng đã bị hủy trước đó");
         if (order.getStatus() == OrderStatus.CONFIRMED) {
             for (OrderItem item : sortedItems(order)) {
                 Product p = lockedProduct(item.getProduct().getId());
                 int newStock;
                 try { newStock = Math.addExact(p.getStockQuantity(), item.getQuantity()); }
-                catch (ArithmeticException ex) { throw new ApiException(HttpStatus.CONFLICT, "Stock overflow on cancel"); }
+                catch (ArithmeticException ex) { throw new ApiException(HttpStatus.CONFLICT, "Số lượng tồn kho vượt giới hạn khi hoàn hàng"); }
                 p.changeStock(newStock);
                 logs.save(new InventoryLog(p, order, item.getQuantity(), newStock, "ORDER_CANCEL"));
             }
@@ -88,7 +88,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderResponse get(Long id) {
         return toResponse(orders.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Order not found")));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng")));
     }
 
     @Transactional(readOnly = true)
@@ -97,10 +97,10 @@ public class OrderService {
     }
 
     private SaleOrder lockedOrder(Long id) {
-        return orders.findByIdForUpdate(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Order not found"));
+        return orders.findByIdForUpdate(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Order không tồn tại"));
     }
     private Product lockedProduct(Long id) {
-        return products.findByIdForUpdate(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
+        return products.findByIdForUpdate(id).orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product không tồn tại"));
     }
     private List<OrderItem> sortedItems(SaleOrder order) {
         return order.getItems().stream().sorted(Comparator.comparing(i -> i.getProduct().getId())).toList();
