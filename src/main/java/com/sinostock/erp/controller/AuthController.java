@@ -22,9 +22,9 @@ public class AuthController {
     @PostMapping("/auth/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         var user = users.findByUsername(request.username())
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid username or password"));
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Tên đăng nhập hoặc mật khẩu không đúng"));
         if (!passwords.matches(request.password(), user.getPasswordHash()))
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Tên đăng nhập hoặc mật khẩu không đúng");
         return new LoginResponse(tokens.issue(user), "Bearer", user.getUsername(), user.getRole());
     }
     @GetMapping("/health")
