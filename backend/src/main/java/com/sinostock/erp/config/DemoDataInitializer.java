@@ -38,12 +38,15 @@ public class DemoDataInitializer {
             }
 
             if (demoEnabled) {
-                if (users.findByUsername("admin").isEmpty()) {
-                    users.save(new UserAccount("admin", encoder.encode("Admin@12345"), Role.ADMIN));
-                }
-                if (users.findByUsername("staff").isEmpty()) {
-                    users.save(new UserAccount("staff", encoder.encode("Staff@12345"), Role.STAFF));
-                }
+                // Demo credentials are for local development and automated tests ONLY.
+                // Render uses SEED_DEMO=false; NEVER create known-password accounts online.
+                seedUser(users, encoder, "admin", "Admin@12345", Role.ADMIN);
+                seedUser(users, encoder, "warehouse", "Warehouse@12345", Role.WAREHOUSE_MANAGER);
+                seedUser(users, encoder, "sales", "SalesStaff@12345", Role.SALES_STAFF);
+                seedUser(users, encoder, "accountant", "Accountant@12345", Role.ACCOUNTANT);
+                seedUser(users, encoder, "purchasing", "Purchasing@12345", Role.PURCHASING_MANAGER);
+                seedUser(users, encoder, "manager", "Manager@12345", Role.GENERAL_MANAGER);
+                seedUser(users, encoder, "staff", "Staff@12345", Role.STAFF); // Legacy
             }
             if (!demoEnabled && (adminPassword == null || adminPassword.isBlank()) && users.count() == 0) {
                 throw new IllegalStateException(
@@ -57,4 +60,11 @@ public class DemoDataInitializer {
             }
         };
     }
+    private static void seedUser(UserRepository users, PasswordEncoder encoder, String username,
+                                 String password, Role role) {
+        if (users.findByUsername(username).isEmpty()) {
+            users.save(new UserAccount(username, encoder.encode(password), role));
+        }
+    }
+
 }
