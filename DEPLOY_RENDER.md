@@ -1,86 +1,58 @@
-# Deploy SinoStock ERP to Render — no local Maven/PostgreSQL needed
+# Hướng dẫn deploy SinoStock ERP trên Render và Neon
 
-**Stack:** Java 21 Spring Boot backend, embedded Chinese/English management UI, Render Postgres.
+Repository đã tách rõ `frontend/` và `backend/`, song vẫn dùng **một** Render Web Service và Neon PostgreSQL.
 
-## 1) Publish source code to GitHub
+## Cấu hình hiện tại
 
-1. Extract `SinoStock_ERP_Render_Ready.zip`.
-2. Create an **empty** repository, for example `SinoStock-ERP`, on https://github.com/new .
-   - Select *Public* if you intend to use a public showcase.
-   - Do not initialize with a README, license, or .gitignore.
-3. Open the repository → **uploading an existing file**.
-4. Drag and drop **the contents of the extracted `sinostock-erp` folder** (not the ZIP, and not only the folder name). The root of the GitHub repository must include `pom.xml`, `Dockerfile`, `render.yaml`, and `src/`.
-   - For many nested files, using Git locally is more reliable:
-     ```powershell
-     cd path\to\sinostock-erp
-     git init
-     git branch -M main
-     git add .
-     git commit -m "Initial SinoStock ERP Render deployment"
-     git remote add origin https://github.com/<your-username>/SinoStock-ERP.git
-     git push -u origin main
-     ```
-   - If GitHub asks you to sign in, authenticate with your usual GitHub account. Do **not** embed a token in a public file.
+- Repository: [vdprogramm/SinoStock-ERP](https://github.com/vdprogramm/SinoStock-ERP), nhánh `main`.
+- Service Render: `sinostock-erp-api`.
+- File triển khai tại gốc: `Dockerfile`, `render.yaml`.
+- Database: Neon PostgreSQL, qua biến `DATABASE_URL` có sẵn trên Render.
+- URL website: https://sinostock-erp-api.onrender.com
 
-## 2) Launch Render Blueprint
+## Sau khi cập nhật GitHub
 
-1. Open https://dashboard.render.com/blueprints
-2. Click **New Blueprint Instance** (labels may vary).
-3. Connect GitHub and select the repository.
-4. Render reads the root `render.yaml` and provisions:
-   - `sinostock-erp-api` (Docker, Free, Singapore)
-   - `sinostock-erp-db` (PostgreSQL, Free, Singapore)
-5. When prompted for `ADMIN_PASSWORD`, enter your own **strong, unique password, at least 12 characters**. Never share it in a public repository or chat.
-6. Approve the Blueprint and deploy. Render generates `JWT_SECRET` automatically.
+Render được cấu hình tự động triển khai commit từ `main`. Nếu không thấy build mới, mở Render → `sinostock-erp-api` → Deploys → Manual Deploy → Deploy latest commit.
 
-You do NOT have to install Java, Maven, Docker, or PostgreSQL locally to deploy this Blueprint.
+Docker build theo quy trình:
+1. Node.js biên dịch React trong `frontend/`.
+2. Maven biên dịch Backend trong `backend/`.
+3. Docker chèn **tệp đã biên dịch** của React vào JAR Spring Boot (không đưa mã nguồn React vào thư mục Backend trên GitHub).
+4. Chạy ứng dụng tại cùng một domain, API có tiền tố `/api`.
 
-## 3) Verify
+Cấu hình `render.yaml` tiếp tục chỉ tạo Web Service, **không tạo Render PostgreSQL thứ hai**.
 
-Open the real URL shown by Render for **sinostock-erp-api**, not an invented subdomain.
+## Biến môi trường quan trọng
 
-- `https://<your-service>.onrender.com/api/health`: returns JSON with `"status":"UP"`.
-- `https://<your-service>.onrender.com/`: Chinese/English dashboard.
-- `https://<your-service>.onrender.com/swagger-ui/index.html`: API documentation.
+`DATABASE_URL`: chuỗi kết nối Neon (không chia sẻ và không đưa vào GitHub).
 
-Sign in to the dashboard with:
-- Username: `admin`
-- Password: the `ADMIN_PASSWORD` entered in Render.
+`JWT_SECRET`: chuỗi ngẫu nhiên đủ mạnh do Render tạo.
 
-Sample products seed automatically. A new order starts `PENDING`; clicking confirm checks and deducts inventory.
+`ADMIN_USERNAME`: `admin`.
 
-## Limitations / Important security information
+`ADMIN_PASSWORD`: mật khẩu bí mật dài ít nhất 12 ký tự, chỉ sử dụng tạo tài khoản lần đầu, không đặt lại mật khẩu sẵn có sau mỗi lần khởi động.
 
-- This is a **demo MVP** intended for portfolio and evaluation, not a production-ready ERP.
-- Render Free web services **sleep after 15 minutes of inactivity**; startup may take about a minute.
-- Render Free PostgreSQL **expires 30 days after creation**. Export data or switch to paid Postgres/Neon if this should remain available long-term.
-- `ADMIN_PASSWORD` is used only to create the first administrator. Changing the Render environment variable afterwards **does not reset** the existing user's password.
-- Do not turn `SEED_DEMO=true` on in publicly accessible deployments. That option adds test users with known passwords.
-- `hibernate.ddl-auto=update` is strictly for the MVP; use Flyway migrations, rate limiting and security hardening for production.
-- Swagger is public for portfolio demonstration. Do not expose confidential data.
+`SEED_DEMO`: `false` trên dịch vụ công khai.
 
-## Deployment configuration notes
+`SEED_SAMPLE_PRODUCTS`: `true` nếu muốn seed sản phẩm mẫu khi DB trống.
 
-Render provides its Postgres URL in the format `postgresql://user:password@host:port/db`.
-At app start, `SinoStockApplication` converts `DATABASE_URL` to Spring's
-`jdbc:postgresql://...` plus separate username/password properties.
+`DB_POOL_SIZE`: `3`.
 
-If you switch to Neon, you may configure:
-- `DB_URL=jdbc:postgresql://<NEON_HOST>:5432/<DB>?sslmode=require`
-- `DB_USERNAME=<role>`
-- `DB_PASSWORD=<secret>`
-and **remove `DATABASE_URL`** from the service environment.
+Không thay đổi các biến này chỉ vì di chuyển thư mục.
 
-Other variables:
-- `JWT_SECRET` (auto-generated by Render Blueprint)
-- `SEED_DEMO=false`
-- `SEED_SAMPLE_PRODUCTS=true`
-- `DB_POOL_SIZE=3`
-- `PORT` is supplied by Render; Spring listens on `${PORT:8080}`.
+## Xác minh
 
-Troubleshooting:
-- `Could not resolve placeholder ...`: missing required environment variable.
-- `Failed to configure a DataSource`: inspect Render DB status and linked `DATABASE_URL`.
-- `No accounts exist`: supply `ADMIN_PASSWORD` (12+ chars).
-- Browser 401: sign in again; Bearer JWT expires after 120 minutes.
-- Docker build error: inspect the earliest `mvn package` compilation error in Render logs.
+- Website: https://sinostock-erp-api.onrender.com
+- Sức khỏe API: https://sinostock-erp-api.onrender.com/api/health
+- Swagger: https://sinostock-erp-api.onrender.com/swagger-ui/index.html
+
+Mở website, thử đăng nhập, xem sản phẩm, đơn hàng, dashboard. Khi vừa deploy Render Free có thể khởi động chậm do chế độ ngủ.
+
+## Khi có lỗi
+
+- Nếu React không build: xem bước `npm run build` trong log.
+- Nếu Docker không tìm được `pom.xml`: kiểm tra `COPY backend/pom.xml ./` và `COPY backend/src/ ./src/`.
+- Nếu PostgreSQL không kết nối: kiểm tra `DATABASE_URL` trong Environment của Web Service.
+- Nếu 401: đăng nhập lại.
+- Nếu 403: tài khoản hiện tại không có quyền thực hiện thao tác.
+- Nếu React hiển thị giao diện cũ: thử Ctrl + Shift + R.
