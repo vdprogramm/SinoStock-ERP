@@ -1,21 +1,28 @@
-# SinoStock ERP — React Frontend (tiếng Việt)
+# Giao diện SinoStock ERP — React + TypeScript
 
-- React 18, TypeScript, Vite, Ant Design, Recharts.
-- Cùng origin với Spring Boot sau khi deploy; gọi REST API qua đường dẫn `/api`.
-- JWT trong sessionStorage; role access luôn được kiểm tra lại ở Backend.
-- Các màn hình: tổng quan, sản phẩm/kho, bán hàng, khách hàng, nhà cung cấp, mua hàng/nhập kho, kế toán/công nợ, báo cáo và quản lý tài khoản.
+**Toàn bộ mã nguồn Frontend nằm riêng tại thư mục `frontend/`.**
 
-## Phát triển cục bộ
-Chạy backend ở http://localhost:8080, sau đó:
+Dùng React 18, TypeScript, Vite, Ant Design, React Router và Recharts; giao diện bằng tiếng Việt.
+
+## Chạy riêng Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Vite proxy các request `/api` đến Spring Boot.
-```bash
-npm run build
-```
-Render dùng Dockerfile tại thư mục gốc để build FE trước, sau đó copy `dist/` vào thư mục `src/main/resources/static` của Spring Boot khi đóng gói JAR. Chỉ cần một Render Web Service.
 
-**Lưu ý:** Đơn vị tiền tệ hiện là CNY theo Backend; nhãn, nút, thông báo và tên vai trò hiển thị bằng tiếng Việt.
+Backend Spring Boot cần chạy song song tại http://localhost:8080; Vite proxy `/api` đến cổng Backend. `npm run build` tạo `dist/` ở Frontend.
+
+## Tệp chính
+
+- `src/App.tsx`: layout, menu và trang đăng nhập.
+- `src/auth.tsx`: phiên đăng nhập JWT.
+- `src/api.ts`: REST client.
+- `src/types.ts`: DTO TypeScript và vai trò.
+- `src/pages/`: 9 trang nghiệp vụ.
+- `src/styles.css`: CSS.
+
+Backend nằm tại `../backend/`, không nằm trong Frontend và không chứa mã React.
+
+Trên Render, Dockerfile gốc tạo bản build React rồi đóng gói tệp tĩnh vào Spring Boot để chạy trên **một domain**. Việc này không làm thay đổi cách sắp xếp mã nguồn trên GitHub.
