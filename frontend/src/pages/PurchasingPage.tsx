@@ -1,0 +1,19 @@
+import {useEffect,useState} from "react";
+import {Button,Card,Form,InputNumber,Modal,Popconfirm,Select,Space,Table,Tag,message} from "antd";
+import {PlusOutlined,ReloadOutlined} from "@ant-design/icons";
+import {request} from "../api";import type {Partner,Product,Purchase,PurchaseStatus} from "../types";import {money,productName,statusNames} from "../types";
+const colors:Record<PurchaseStatus,string>={DRAFT:"gold",RECEIVED:"green",CANCELLED:"red"};
+export default function PurchasingPage(){
+ const [rows,setRows]=useState<Purchase[]>([]),[suppliers,setSuppliers]=useState<Partner[]>([]),[products,setProducts]=useState<Product[]>([]),[loading,setLoading]=useState(false),[open,setOpen]=useState(false),[form]=Form.useForm();
+ const load=async()=>{setLoading(true);try{const [a,b,c]=await Promise.all([request<Purchase[]>("/purchasing"),request<Partner[]>("/suppliers"),request<Product[]>("/products")]);setRows(a);setSuppliers(b);setProducts(c);}catch(e){message.error((e as Error).message);}finally{setLoading(false);}};
+ useEffect(()=>{void load();},[]);
+ const create=async(v:{supplierId:number;productId:number;quantity:number;unitCostCny:number})=>{try{await request("/purchasing",{method:"POST",body:v});message.success("Đã lập phiếu mua hàng");setOpen(false);form.resetFields();void load();}catch(e){message.error((e as Error).message);}};
+ const act=async(id:number,action:"receive"|"cancel")=>{try{await request("/purchasing/"+id+"/"+action,{method:"PATCH"});message.success("Đã cập nhật phiếu mua");void load();}catch(e){message.error((e as Error).message);}};
+ return <><div className="page-head"><div><h1 className="page-title">Mua hàng và nhập kho</h1><p className="page-subtitle">Lập phiếu mua từ nhà cung cấp; nhận hàng sẽ cộng tồn kho.</p></div><Space><Button icon={<ReloadOutlined/>} onClick={()=>void load()}>Làm mới</Button><Button type="primary" icon={<PlusOutlined/>} onClick={()=>setOpen(true)}>Lập phiếu mua</Button></Space></div>
+ <Card><Table rowKey="id" loading={loading} dataSource={rows} scroll={{x:850}} columns={[{title:"Mã phiếu",dataIndex:"reference"},{title:"Nhà cung cấp",dataIndex:"supplier"},{title:"SKU",dataIndex:"sku"},{title:"Số lượng",dataIndex:"quantity"},{title:"Giá nhập",dataIndex:"unitCostCny",render:money},{title:"Trạng thái",dataIndex:"status",render:(s:PurchaseStatus)=><Tag color={colors[s]}>{statusNames[s]}</Tag>},{title:"Thao tác",render:(_:unknown,p:Purchase)=>p.status==="DRAFT"?<Space><Popconfirm title="Xác nhận nhận hàng và cộng tồn kho?" onConfirm={()=>void act(p.id,"receive")} okText="Nhập kho" cancelText="Quay lại"><Button size="small" type="primary">Nhập kho</Button></Popconfirm><Popconfirm title="Hủy phiếu mua?" onConfirm={()=>void act(p.id,"cancel")} okText="Hủy" cancelText="Quay lại"><Button size="small" danger>Hủy</Button></Popconfirm></Space>:"—"}]}/></Card>
+ <Modal open={open} title="Lập phiếu mua hàng" onCancel={()=>setOpen(false)} footer={null} destroyOnClose><Form form={form} layout="vertical" onFinish={v=>void create(v)}>
+ <Form.Item name="supplierId" label="Nhà cung cấp" rules={[{required:true,message:"Chọn nhà cung cấp"}]}><Select options={suppliers.map(s=>({value:s.id,label:s.name}))}/></Form.Item>
+ <Form.Item name="productId" label="Sản phẩm" rules={[{required:true,message:"Chọn sản phẩm"}]}><Select options={products.map(p=>({value:p.id,label:productName(p)+" · "+p.sku}))}/></Form.Item>
+ <Form.Item name="quantity" label="Số lượng mua" initialValue={1} rules={[{required:true,message:"Nhập số lượng"}]}><InputNumber style={{width:"100%"}} min={1} precision={0}/></Form.Item>
+ <Form.Item name="unitCostCny" label="Đơn giá nhập (CNY)" rules={[{required:true,message:"Nhập đơn giá"}]}><InputNumber style={{width:"100%"}} min={0.01} precision={2}/></Form.Item><Button block type="primary" htmlType="submit">Lưu phiếu mua</Button></Form></Modal></>;
+}

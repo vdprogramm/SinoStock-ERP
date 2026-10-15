@@ -1,4 +1,44 @@
-# SinoStock ERP · 中越库存订单管理系统
+# SinoStock ERP — Spring Boot + React (Tiếng Việt)
+
+**Frontend:** React 18 + TypeScript + Vite + Ant Design + Recharts; nằm trong [frontend/](frontend/). Giao diện chính không còn được viết thủ công trong `src/main/resources/static/index.html`: thư mục đó được tạo từ bản build React khi Docker build.
+
+**Backend:** Java 21 + Spring Boot 3.5 + Spring Security JWT + Spring Data JPA + PostgreSQL trên Neon.
+
+**Triển khai:** Dockerfile build React trước rồi copy bản build vào JAR Spring Boot, dùng **một** Render Web Service và URL hiện tại. Không cần tạo thêm dịch vụ frontend.
+
+## 9 màn hình React
+1. Tổng quan và biểu đồ doanh thu 7 ngày
+2. Quản lý sản phẩm, chỉnh sửa và điều chỉnh tồn kho
+3. Bán hàng, xác nhận / hủy đơn
+4. Khách hàng
+5. Nhà cung cấp
+6. Mua hàng và nhập kho
+7. Kế toán, thanh toán và công nợ
+8. Báo cáo điều hành
+9. Tài khoản nhân viên và phân quyền
+
+Có 6 vai trò chính; dữ liệu `STAFF` cũ vẫn được hỗ trợ. Menu và thao tác phía React tuân theo vai trò; backend quyết định quyền thực tế.
+
+## Chạy thử frontend trên máy
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Lúc này backend chạy trên localhost:8080 và Vite proxy `/api` về backend.
+
+## Kiểm tra build
+```bash
+cd frontend
+npm run build
+cd ..
+mvn test
+```
+
+---
+
+## Tài liệu backend ban đầu
+
 
 **Java 21 · Spring Boot 3.5.16 · PostgreSQL · Spring Security/JWT · JPA · Swagger**
 

@@ -39,7 +39,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/", "/index.html", "/favicon.ico", "/error").permitAll()
+                        .requestMatchers("/", "/index.html", "/favicon.ico", "/error", "/assets/**", "/vite.svg").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/suppliers/**", "/api/purchasing/**")
                             .hasAnyRole("ADMIN", "PURCHASING_MANAGER")
