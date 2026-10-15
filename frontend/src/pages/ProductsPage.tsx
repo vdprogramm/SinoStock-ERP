@@ -10,7 +10,7 @@ export default function ProductsPage({role}:{role:Role}){
  useEffect(()=>{void load();},[]);
  const save=async(v:Record<string,unknown>)=>{try{
  const dto={...v,nameCn:v.nameCn,nameEn:v.nameCn};
- if(editing)await request("/products/"+editing.id,{method:"PUT",body:{sku:dto.sku,nameCn:dto.nameCn,nameEn:dto.nameEn,priceCny:dto.priceCny,lowStockThreshold:dto.lowStockThreshold}});
+ if(editing)await request("/products/"+editing.id,{method:"PUT",body:dto});
  else await request("/products",{method:"POST",body:dto});
  message.success("Đã lưu sản phẩm");setOpen(false);form.resetFields();void load();
  }catch(e){message.error((e as Error).message);}};
