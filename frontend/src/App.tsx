@@ -1,6 +1,6 @@
 import {useState} from "react";
-import { App as AntApp, Avatar, Button, Card, Form, Input, Layout, Menu, Space, Tag, Typography } from "antd";
-import { ArrowLeftOutlined, BankOutlined, BarChartOutlined, DashboardOutlined, FileDoneOutlined, InboxOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, ShopOutlined, ShoppingCartOutlined, TeamOutlined, TruckOutlined, UserOutlined, UserSwitchOutlined } from "@ant-design/icons";
+import { App as AntApp, Avatar, Button, Card, Dropdown, Form, Input, Layout, Menu, Space, Tag } from "antd";
+import { ArrowLeftOutlined, DownOutlined, BankOutlined, BarChartOutlined, DashboardOutlined, FileDoneOutlined, InboxOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, ShopOutlined, ShoppingCartOutlined, TeamOutlined, TruckOutlined, UserOutlined, UserSwitchOutlined } from "@ant-design/icons";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import {useAuth} from "./auth";
 import type {Role} from "./types";import {roleNames} from "./types";
@@ -50,9 +50,32 @@ function Workspace(){
  <div className="sidebar-foot">{!collapsed&&"Java Spring Boot · React"}</div>
  </Sider>
  <Layout>
- <Header style={{display:"flex",alignItems:"center",justifyContent:"space-between",height:72,padding:"0 26px",borderBottom:"1px solid #e8edf3"}}>
- <Space><Button type="text" icon={collapsed?<MenuUnfoldOutlined/>:<MenuFoldOutlined/>} onClick={()=>setCollapsed(!collapsed)}/><Typography.Text type="secondary">Hệ thống quản trị SinoStock</Typography.Text></Space>
- <Space size="middle"><Avatar icon={<UserOutlined/>} style={{background:"#0c8075"}}/><div className="header-user"><strong style={{display:"block",color:"#243850"}}>{session.username}</strong>{roleNames[session.role]}</div><Button onClick={logout} icon={<LogoutOutlined/>} type="text" title="Đăng xuất"/></Space>
+ <Header className="app-header">
+ <div className="header-leading">
+   <Button type="text" aria-label={collapsed?"Mở rộng menu":"Thu gọn menu"} icon={collapsed?<MenuUnfoldOutlined/>:<MenuFoldOutlined/>} onClick={()=>setCollapsed(!collapsed)}/>
+   <span className="header-context">Hệ thống quản trị SinoStock</span>
+ </div>
+ <Dropdown
+   placement="bottomRight"
+   trigger={["click"]}
+   menu={{
+     items:[
+       {key:"account",disabled:true,label:<div className="account-menu-intro"><strong>{session.username}</strong><span>{roleNames[session.role]}</span></div>},
+       {type:"divider"},
+       {key:"logout",icon:<LogoutOutlined/>,label:"Đăng xuất"}
+     ],
+     onClick:({key})=>{if(key==="logout")logout();}
+   }}
+ >
+   <button className="account-trigger" type="button" aria-label={"Mở menu tài khoản của "+session.username}>
+     <Avatar size={35} icon={<UserOutlined/>} className="account-avatar"/>
+     <span className="account-details">
+       <strong className="account-name">{session.username}</strong>
+       <span className="account-role">{roleNames[session.role]}</span>
+     </span>
+     <DownOutlined className="account-chevron"/>
+   </button>
+ </Dropdown>
  </Header>
  <Content className="app-content" style={{padding:28}}>
  {page?<Routes>
