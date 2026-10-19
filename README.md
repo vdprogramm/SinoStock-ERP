@@ -126,13 +126,12 @@ Các tài khoản sau **được tự tạo khi `SEED_DEMO=true` và database ch
 
 | Vai trò | Tên đăng nhập | Mật khẩu demo (CHỈ LOCAL) |
 |---|---|---|
-| **Quản trị viên** (`ADMIN`) | `admin` | `Admin@12345` |
+| **Quản trị viên** (`ADMIN`) | `admin` | `Thanhvinh05@` |
 | **Quản lý kho** (`WAREHOUSE_MANAGER`) | `warehouse` | `Warehouse@12345` |
 | **Nhân viên bán hàng** (`SALES_STAFF`) | `sales` | `SalesStaff@12345` |
 | **Kế toán** (`ACCOUNTANT`) | `accountant` | `Accountant@12345` |
 | **Quản lý mua hàng** (`PURCHASING_MANAGER`) | `purchasing` | `Purchasing@12345` |
 | **Ban giám đốc** (`GENERAL_MANAGER`) | `manager` | `Manager@12345` |
-| **Nhân viên cũ** (`STAFF`) | `staff` | `Staff@12345` |
 
 **Cảnh báo:** Các chuỗi trên là mật khẩu mẫu công khai trong mã nguồn, tuyệt đối **không dùng trên Render, Neon hay môi trường thực tế**. Chỉ dùng database phát triển riêng.
 
