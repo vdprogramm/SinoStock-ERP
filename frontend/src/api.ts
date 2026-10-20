@@ -25,6 +25,7 @@ export async function request<T>(path:string, options:{ method?:string; body?:un
   } catch { throw new Error("Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại."); }
   const data=await response.json().catch(()=>null) as {message?:string}|null;
   if(!response.ok){
+    if([502,503,504].includes(response.status)) throw new HttpError(response.status,"Máy chủ đang khởi động sau thời gian nghỉ. Vui lòng đợi khoảng một phút rồi thử lại.");
     if(response.status===401 && path!=="/auth/login"){
       saveSession(null);
       window.dispatchEvent(new Event("sinostock:expired"));
